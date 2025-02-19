@@ -1,27 +1,17 @@
 import 'dart:typed_data';
 import 'package:brainwave/animations/star_background.dart';
-import 'package:brainwave/models/app_user_usage.dart';
 import 'package:brainwave/providers/app_user_usage_provider.dart';
 import 'package:brainwave/providers/user_report_provider.dart';
 import 'package:brainwave/screens/welcome_screen.dart';
-import 'package:brainwave/utils/usage_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:device_apps/device_apps.dart';
 import 'package:firebase_ml_model_downloader/firebase_ml_model_downloader.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
-
-class DailyActivityModel {
-  String activity;
-  bool selected;
-  DailyActivityModel(this.activity, this.selected);
-}
-
-class MentalHealthQuestionModel {
-  String question;
-  int rating;
-  MentalHealthQuestionModel(this.question, this.rating);
-}
+import 'package:brainwave/models/report_models.dart';
+import 'package:brainwave/components/daily_activity_checkbox.dart';
+import 'package:brainwave/components/app_usage_card.dart';
+import 'package:brainwave/components/mental_health_questions_dropdown.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -31,28 +21,18 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  List<_AppUsageWithIcon> _apps = [];
-  List<DailyActivityModel> _dailyActivities = [];
-  List<MentalHealthQuestionModel> _mentalHealthQuestions = [];
+  List<AppUsageWithIcon> _apps = [];
+  final List<DailyActivityModel> _dailyActivities = DailyActivityCheckbox.defaultActivities();
+  final List<MentalHealthQuestionModel> _mentalHealthQuestions = MentalHealthQuestionDropdown.defaultQuestions();
 
   bool _isLoading = true;
   bool _isSending = false;
   Interpreter? _interpreter;
 
   @override
-  void initState() {
+  void initState() async {
     super.initState();
-    _initPage();
-  }
-
-  Future<void> _initPage() async {
-    setState(() => _isLoading = true);
-
     await _fetchRecentAppUsage();
-
-    _initDailyActivities();
-    _initMentalHealthQuestions();
-
     setState(() => _isLoading = false);
   }
 
@@ -61,11 +41,11 @@ class _ReportScreenState extends State<ReportScreen> {
     await usageProvider.getAppUsage();
     final usageList = usageProvider.appUsage;
 
-    final updated = <_AppUsageWithIcon>[];
+    final updated = <AppUsageWithIcon>[];
     for (final app in usageList) {
       final icon = await _fetchAppIcon(app.appPackageName);
       updated.add(
-        _AppUsageWithIcon(appModel: app, iconBytes: icon, attributes: []),
+        AppUsageWithIcon(appModel: app, iconBytes: icon, attributes: []),
       );
     }
 
@@ -78,33 +58,6 @@ class _ReportScreenState extends State<ReportScreen> {
     final app =
         await DeviceApps.getApp(packageName, true) as ApplicationWithIcon?;
     return app?.icon;
-  }
-
-  void _initDailyActivities() {
-    final activities = [
-      'Going for a walk',
-      'Reading a book',
-      'Going out',
-      'Working out',
-      'Meditating',
-      'Socializing',
-      'Relaxing',
-      'Working',
-    ];
-    _dailyActivities =
-        activities.map((a) => DailyActivityModel(a, false)).toList();
-  }
-
-  void _initMentalHealthQuestions() {
-    final questions = [
-      'How was your overall mood today?',
-      'How stressed did you feel today?',
-      'How well did you sleep last night?',
-      'How anxious did you feel today?',
-      'How happy did you feel today?',
-    ];
-    _mentalHealthQuestions =
-        questions.map((q) => MentalHealthQuestionModel(q, 1)).toList();
   }
 
   Future<void> _downloadMLModelAndPredict() async {
@@ -121,9 +74,6 @@ class _ReportScreenState extends State<ReportScreen> {
     );
 
     _interpreter = Interpreter.fromFile(model.file);
-    final inputTensor = _interpreter!.getInputTensor(0);
-    print('Interpreter input shape: ${inputTensor.shape}');
-    print('Interpreter input type: ${inputTensor.type}');
     final predictions = _runInference();
     await _sendReport(predictions);
 
@@ -197,145 +147,97 @@ class _ReportScreenState extends State<ReportScreen> {
       body: StarryBackgroundWidget(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : _buildContent(),
+            : _buildReportContent(),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildReportContent() {
     return ListView(
+      children: [
+        _buildAppUsageSection(),
+        _buildDailyActivitiesSection(),
+        _buildMentalHealthSection(),
+        _buildSubmitButton(),
+      ],
+    );
+  }
+
+  Widget _buildAppUsageSection() {
+    return Column(
       children: [
         const ListTile(
           title: Text('Apps Used'),
           subtitle: Text('Assign attributes to each app used.'),
         ),
-        ..._apps.map(
-          (appItem) => Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: appItem.iconBytes != null
-                      ? Image.memory(appItem.iconBytes!)
-                      : const Icon(Icons.apps),
-                  title: Text(appItem.appModel.appName),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Category: ${appItem.appModel.appType}'),
-                      Text(
-                        'Usage Time: ${formatDuration(appItem.appModel.appUsage)}',
-                      ),
-                      _buildAttributesMultiSelect(appItem),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        ..._apps.map((appItem) => AppUsageCard(
+              appItem: appItem,
+              onAttributeSelected: (attribute, selected) {
+                setState(() {
+                  if (selected) {
+                    appItem.attributes.add(attribute);
+                  } else {
+                    appItem.attributes.remove(attribute);
+                  }
+                });
+              },
+            )),
+      ],
+    );
+  }
+
+  Widget _buildDailyActivitiesSection() {
+    return Column(
+      children: [
         const ListTile(
           title: Text('Today\'s Activities'),
           subtitle: Text('Select activities you did today.'),
         ),
         ..._dailyActivities.map(
-          (act) => CheckboxListTile(
-            title: Text(act.activity),
-            value: act.selected,
-            onChanged: (val) {
-              setState(() => act.selected = val ?? false);
-            },
-          ),
-        ),
-        const ListTile(
-          title: Text('Mental Health Questions'),
-          subtitle: Text('Rate from 1 to 5.'),
-        ),
-        ..._mentalHealthQuestions.map(
-          (q) => ListTile(
-            title: Text(q.question),
-            trailing: DropdownButton<int>(
-              value: q.rating,
-              onChanged: (val) {
-                setState(() => q.rating = val ?? 1);
-              },
-              items: List.generate(5, (i) => i + 1)
-                  .map((v) => DropdownMenuItem(value: v, child: Text('$v')))
-                  .toList(),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: ElevatedButton(
-            onPressed: _isSending ? null : _downloadMLModelAndPredict,
-            child: _isSending
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Text('Submit'),
+          (activity) => DailyActivityCheckbox(
+            activity: activity,
+            onChanged: (val) =>
+                setState(() => activity.selected = val ?? false),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAttributesMultiSelect(_AppUsageWithIcon appItem) {
-    final possibleAttributes = [
-      'Home',
-      'Work',
-      'Public Place',
-      'On the Go',
-      'Happy',
-      'Sad',
-      'Anxious',
-      'Stressed',
-      'Calm',
-      'Bored',
-      'Excited',
-      'Entertainment',
-      'Communication',
-      'Productivity',
-      'Information',
-      'Relaxation',
-    ];
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 2,
-      children: possibleAttributes.map((attr) {
-        final isSelected = appItem.attributes.contains(attr);
-        return ChoiceChip(
-          label: Text(attr),
-          selected: isSelected,
-          onSelected: (val) {
-            setState(() {
-              if (val) {
-                appItem.attributes.add(attr);
-              } else {
-                appItem.attributes.remove(attr);
-              }
-            });
-          },
-        );
-      }).toList(),
+  Widget _buildMentalHealthSection() {
+    return Column(
+      children: [
+        const ListTile(
+          title: Text('Mental Health Questions'),
+          subtitle: Text('Rate from 1 to 5.'),
+        ),
+        ..._mentalHealthQuestions.map(
+          (question) => MentalHealthQuestionDropdown(
+            question: question,
+            onRatingChanged: (val) =>
+                setState(() => question.rating = val ?? 1),
+          ),
+        ),
+      ],
     );
   }
-}
 
-class _AppUsageWithIcon {
-  final AppUserUsage appModel;
-  final Uint8List? iconBytes;
-  final List<String> attributes;
-
-  _AppUsageWithIcon({
-    required this.appModel,
-    this.iconBytes,
-    required this.attributes,
-  });
+  Widget _buildSubmitButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: ElevatedButton(
+        onPressed: _isSending ? null : _downloadMLModelAndPredict,
+        child: _isSending
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text('Submit'),
+      ),
+    );
+  }
 }
