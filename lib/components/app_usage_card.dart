@@ -12,33 +12,63 @@ class AppUsageCard extends StatelessWidget {
     required this.appItem,
     required this.onAttributeSelected,
   });
-  
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Column(
         children: [
-          ListTile(
-            leading: appItem.iconBytes != null
-                ? Image.memory(appItem.iconBytes!)
-                : const Icon(Icons.apps),
-            title: Text(appItem.appModel.appName),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Category: ${appItem.appModel.appType}'),
-                Text(
-                  'Usage Time: ${formatDuration(appItem.appModel.appUsage)}',
-                ),
-                AttributesChoices(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 10,
+                children: [
+                  Container(
+                    width: 48,
+                    alignment: Alignment.topCenter,
+                    child: appItem.iconBytes != null
+                        ? Image.memory(
+                            appItem.iconBytes!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.contain,
+                          )
+                        : const Icon(Icons.apps, size: 48),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appItem.appModel.appName,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Row(
+                          children: [
+                            Text('Category: ${appItem.appModel.appType}'),
+                            const SizedBox(width: 16),
+                            Text(
+                              'Usage: ${formatDuration(appItem.appModel.appUsage)}',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 48),
+                child: AttributesChoices(
                   selectedAttributes: appItem.attributes,
                   onAttributeSelected: (attribute, selected) =>
                       onAttributeSelected(attribute, selected),
                 ),
-              ],
-            ),
-          ),
+              ),
+            ],
+          )
         ],
       ),
     );

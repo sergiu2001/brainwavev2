@@ -1,7 +1,6 @@
 import 'package:brainwave/animations/star_background.dart';
 import 'package:brainwave/models/user_report.dart';
 import 'package:flutter/material.dart';
-import 'package:brainwave/utils/date_formatter.dart';
 import 'package:brainwave/utils/usage_formatter.dart';
 
 class ReportDetailScreen extends StatelessWidget {
@@ -11,7 +10,7 @@ class ReportDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = formatTimestamp(report.timestamp);
+    final dateStr = report.timestamp;
     final responseStr = (report.predictions.isEmpty)
         ? 'No Response'
         : '${(report.predictions.reduce((a, b) => a + b) / report.predictions.length).toStringAsFixed(2)}%';
@@ -49,10 +48,12 @@ class ReportDetailScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.apps, size: 30),
+                              (app.appIcon != null)
+                                ? Image.memory(app.appIcon!, width: 48, height: 48)
+                                : const Icon(Icons.apps),
                               const SizedBox(width: 8),
                               Text(
-                                'App Name: ${app.appName}',
+                                app.appName,
                                 style: const TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.bold),
                               ),

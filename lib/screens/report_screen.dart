@@ -30,8 +30,14 @@ class _ReportScreenState extends State<ReportScreen> {
   Interpreter? _interpreter;
 
   @override
-  void initState() async {
+  void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _initializeData();
+  });
+  }
+
+  Future<void> _initializeData() async {
     await _fetchRecentAppUsage();
     setState(() => _isLoading = false);
   }
@@ -98,9 +104,9 @@ class _ReportScreenState extends State<ReportScreen> {
       );
     }
     final input = [inputFeatures];
-    final output = List.filled(4, 0.0).reshape([1, 4]);
+    final output = List.filled(1, 0.0).reshape([1, 1]);
     _interpreter!.run(input, output);
-    final predictions = output[0].cast<double>();
+    final predictions = List<double>.from(output[0]);
     return predictions.map((val) => val * 100).toList();
   }
 

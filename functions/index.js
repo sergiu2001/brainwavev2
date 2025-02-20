@@ -13,7 +13,6 @@ const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, DocumentReference, CollectionReference, Timestamp} = require("firebase-admin/firestore");
-
 const functions = require("firebase-functions");
 const {user} = require("firebase-functions/v1/auth");
 const {app} = require("firebase-admin");
@@ -111,14 +110,14 @@ exports.sendReport = functions.https.onCall(async (data, context) => {
   const db = getFirestore();
   const apps = data.apps;
   const dailyActivities = data.dailyActivities;
-  const mentalHealth = data.mentalHealth;
+  const mentalHealthQuestions = data.mentalHealthQuestions;
   const predictions = data.predictions;
 
   const userRef = db.collection("users").doc(userUid);
 
   console.log(apps);
   console.log(dailyActivities);
-  console.log(mentalHealth);
+  console.log(mentalHealthQuestions);
   console.log(predictions);
   console.log(userRef.path);
 
@@ -129,7 +128,7 @@ exports.sendReport = functions.https.onCall(async (data, context) => {
     await reportRef.set({
       apps: apps,
       dailyActivities: dailyActivities,
-      mentalHealth: mentalHealth,
+      mentalHealthQuestions: mentalHealthQuestions,
       timestamp: timestamp,
     });
 

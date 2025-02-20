@@ -27,8 +27,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   void initState() {
     super.initState();
-    _isExpanded = false;
-    _loadReports();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReports();
+    });
   }
 
   Future<void> _loadReports() async {
@@ -51,7 +52,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           appName: app.appName,
           appPackageName: app.appPackageName,
           appType: app.appType,
-          appDate: app.appDate,
           appUsage: app.appUsage,
           appIcon: appWithIcon!.icon,
         ));
@@ -79,11 +79,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     await context.read<AuthProvider>().signOut();
     Navigator.pushReplacement(
         context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-  }
-
-  String _formatTimestamp(dynamic timestamp) {
-    final DateTime date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -117,8 +112,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                         itemCount: _reports.length,
                                         itemBuilder: (context, index) {
                                           final report = _reports[index];
-                                          final timestamp = _formatTimestamp(
-                                              report.timestamp);
+                                          final timestamp = report.timestamp;
                                           String response = 'No prediction!';
                                           if (report.predictions.isNotEmpty) {
                                             final avg = report.predictions
@@ -233,8 +227,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const ProfileScreen(
-                                      userProfile: profileImageURL
-                                    ),
+                                        userProfile: profileImageURL),
                                   ),
                                 );
                               },
@@ -286,6 +279,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             bottom: 16,
             left: 32,
             child: FloatingActionButton(
+              heroTag: 'medical',
               onPressed: () {
                 _showNotification(context);
               },
@@ -296,6 +290,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             bottom: 16,
             right: 0,
             child: FloatingActionButton(
+              heroTag: 'report',
               onPressed: () {
                 Navigator.push(
                   context,

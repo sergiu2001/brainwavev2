@@ -40,10 +40,10 @@ class _AppUsageScreenState extends State<AppUsageScreen> {
       newAppUsage.add(AppUserUsage(
         appName: app.appName,
         appPackageName: app.appPackageName,
-        appDate: app.appDate,
         appType: app.appType,
         appUsage: app.appUsage,
         appIcon: appIcon.icon,
+        appAttributes: app.appAttributes
       ));
     }
     setState(() {

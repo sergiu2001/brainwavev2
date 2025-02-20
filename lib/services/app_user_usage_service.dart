@@ -16,6 +16,7 @@ class AppUserUsageService {
         'uid': _firebaseAuth.currentUser!.uid,
       });
       final rawList = result.data as List<dynamic>;
+      print(rawList);
       return rawList.map((item) {
         final mapItem = Map<String, dynamic>.from(item as Map);
         return AppUserUsage.fromMap(mapItem);
